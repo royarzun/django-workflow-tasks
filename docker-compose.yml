@@ -1,0 +1,16 @@
+version: "2"
+services:
+  db:
+    image: postgres
+  django:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    stdin_open: true
+    tty: true
+    depends_on:
+      - db
+    volumes:
+      - .:/code
+    ports:
+      - "8000:8000"
