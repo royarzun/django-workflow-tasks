@@ -42,8 +42,6 @@ coverage.xml
 *.po
 *.pot
 
-# Sphinx documentation
-docs/
 
 # PyBuilder
 target/
