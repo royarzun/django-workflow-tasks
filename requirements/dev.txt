@@ -1,0 +1,4 @@
+-r base.txt
+
+coverage==4.5.1
+model_mommy==1.6.0

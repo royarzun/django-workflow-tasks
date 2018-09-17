@@ -1,0 +1,9 @@
+# -*- coding: utf-8 -*-
+from django.apps import AppConfig
+
+
+class WorkflowsConfig(AppConfig):
+    name = 'workflows'
+
+    def ready(self):
+        from workflows.signals import handlers

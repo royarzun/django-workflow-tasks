@@ -1,0 +1,5 @@
+arrow==0.12.1
+Django==1.11.15
+django-filter==2.0.0
+djangorestframework==3.8.2
+psycopg2-binary==2.7.5
