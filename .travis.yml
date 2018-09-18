@@ -1,5 +1,4 @@
 sudo: required
-dist: trusty
 
 language:
   - python
@@ -11,11 +10,10 @@ services:
   - postgresql
 
 addons:
-  postgresql: "10"
+  postgresql: "9.4"
   apt:
     packages:
-      - postgresql-10
-      - postgresql-client-10
+      - postgresql-server-dev-9.4
 
 env:
   - DJANGO_SETTINGS_MODULE=workflow_tasks.settings.testing
