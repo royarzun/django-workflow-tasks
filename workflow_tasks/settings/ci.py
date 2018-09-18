@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from workflow_tasks.settings.default import *
+from .default import *
 
 DATABASES = {
     'default': {

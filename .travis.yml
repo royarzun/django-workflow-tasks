@@ -16,7 +16,7 @@ addons:
       - postgresql-server-dev-9.4
 
 env:
-  - DJANGO_SETTINGS_MODULE=workflow_tasks.settings.testing
+  - DJANGO_SETTINGS_MODULE=workflow_tasks.settings.ci
 
 before_script:
   - psql -c 'create database travis_ci_test;' -U postgres
