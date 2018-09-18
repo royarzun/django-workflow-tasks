@@ -1,0 +1,33 @@
+sudo: required
+
+language:
+  - python
+
+python:
+  - "3.6"
+
+services:
+  - postgresql
+
+addons:
+  postgresql: "9.4"
+  apt:
+    packages:
+      - postgresql-server-dev-9.4
+
+env:
+  - DJANGO_SETTINGS_MODULE=workflow_tasks.settings.ci
+
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+
+
+before_install:
+  - sudo apt-get update
+
+install:
+  - pip install -r requirements/dev.txt
+
+
+script:
+  - python manage.py test
