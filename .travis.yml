@@ -10,6 +10,13 @@ python:
 services:
   - postgresql
 
+addons:
+  postgresql: "10"
+  apt:
+    packages:
+      - postgresql-10
+      - postgresql-client-10
+
 env:
   - DJANGO_SETTINGS_MODULE=workflow_tasks.settings.testing
 
@@ -19,7 +26,6 @@ before_script:
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install postgresql postgresql-contrib
 
 install:
   - pip install -r requirements/dev.txt
