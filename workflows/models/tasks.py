@@ -4,19 +4,32 @@ import arrow
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
+from django.db.models import F, Q
 from django.template import Template, Context
 
-from workflows.models.workflows import WorkflowBase
 
 class TaskManager(models.Manager):
     def get_queryset(self):
         return super(TaskManager, self).get_queryset().prefetch_related('values')
 
     def active_tasks(self):
-        return self.get_queryset().filter(status=Task.ACTIVE_STATUS)
+        now = arrow.utcnow().datetime
+        return self.get_queryset() \
+            .filter(status=Task.ACTIVE_STATUS) \
+            .filter(Q(valid_until__isnull=True) | Q(valid_until__lte=now)) \
+            .filter(Q(assignable_from__isnull=True) | Q(assignable_from__gte=now))
 
     def inactive_tasks(self):
-        return self.get_queryset().exclude(status=Task.ACTIVE_STATUS)
+        now = arrow.utcnow().datetime
+        return self.get_queryset() \
+            .exclude(status=Task.ACTIVE_STATUS) \
+            .filter(Q(valid_until__isnull=True) | Q(valid_until__gt=now)) \
+            .filter(Q(assignable_from__isnull=True) | Q(assignable_from__lte=now))
+
+    def look_for_duplicated_tasks(self, task):
+        return self.get_queryset() \
+            .annotate(calculated_footprint=F('values__key')) \
+            .filter(calculated_footprint=task.footprint)
 
 
 class Task(models.Model):
@@ -28,7 +41,7 @@ class Task(models.Model):
     )
     TERMINAL_STATUSES = ['CANCELED', 'COMPLETED']
 
-    workflow = models.ForeignKey(WorkflowBase, related_name='tasks')
+    workflow = models.ForeignKey('workflows.WorkflowBase', related_name='tasks')
     status = models.CharField(max_length=50, choices=ALLOWED_STATUSES, default=ACTIVE_STATUS, db_index=True)
     priority = models.IntegerField(default=0)
 
@@ -43,8 +56,7 @@ class Task(models.Model):
 
     objects = TaskManager()
 
-    @property
-    def footprint(self):
+    def _footprint(self):
         return '-'.join([
             '{key}:{value}'.format(key=tv.key, value=tv.value)
             for tv in self.values.only('key', 'value').distinct('key').order_by('key', '-created')
@@ -98,7 +110,7 @@ class TaskValue(models.Model):
         ('DATETIME', 'Datetime')
     )
 
-    task = models.ForeignKey('Task', related_name='values', on_delete=models.CASCADE)
+    task = models.ForeignKey('workflows.Task', related_name='values', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     key = models.CharField(max_length=50, db_index=True)
     content_type = models.CharField(choices=ALLOWED_CONTENT_TYPES, max_length=50, db_index=True)
