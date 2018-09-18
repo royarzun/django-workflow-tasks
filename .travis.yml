@@ -1,0 +1,29 @@
+sudo: required
+dist: trusty
+
+language:
+  - python
+
+python:
+  - "3.6"
+
+services:
+  - postgresql
+
+env:
+  - DJANGO_SETTINGS_MODULE=workflow_tasks.settings.testing
+
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+
+
+before_install:
+  - sudo apt-get update
+  - sudo apt-get install postgresql postgresql-contrib
+
+install:
+  - pip install -r requirements/dev.txt
+
+
+script:
+  - python manage.py test
