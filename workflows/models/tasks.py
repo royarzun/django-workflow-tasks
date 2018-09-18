@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
+import arrow
+
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.contrib.contenttypes.models import ContentType
 from django.db import models
 from django.template import Template, Context
 
+from workflows.models.workflows import WorkflowBase
 
 class TaskManager(models.Manager):
     def get_queryset(self):
@@ -25,7 +28,7 @@ class Task(models.Model):
     )
     TERMINAL_STATUSES = ['CANCELED', 'COMPLETED']
 
-    workflow = models.ForeignKey('WorkflowBase', related_name='tasks')
+    workflow = models.ForeignKey(WorkflowBase, related_name='tasks')
     status = models.CharField(max_length=50, choices=ALLOWED_STATUSES, default=ACTIVE_STATUS, db_index=True)
     priority = models.IntegerField(default=0)
 
@@ -35,18 +38,32 @@ class Task(models.Model):
     valid_until = models.DateTimeField(null=True, blank=True)
 
     content_type = models.ForeignKey(ContentType, null=True, on_delete=models.CASCADE)
-    assignee_id = models.PositiveIntegerField(null=True, max_length=10)
+    assignee_id = models.PositiveIntegerField(null=True)
     assignee_object = GenericForeignKey('content_type', 'assignee_id')
 
     objects = TaskManager()
 
     @property
+    def footprint(self):
+        return '-'.join([
+            '{key}:{value}'.format(key=tv.key, value=tv.value)
+            for tv in self.values.only('key', 'value').distinct('key').order_by('key', '-created')
+        ])
+
+    @property
     def description(self):
+        """Returns description as rendered html with the workflow and task as part of the context"""
         template = Template(self.workflow.description)
         context = Context(self.get_values())
         return template.render(context)
 
     def get_values(self):
+        """Returns task values as dict
+
+        In case task has repeated keys it will return the latest added value
+
+        :return: dict()
+        """
         values = [(tv.key, tv.value)
                   for tv in self.values.only('key', 'value').distinct('key').order_by('key', '-created')]
         return dict(values)
@@ -59,6 +76,11 @@ class Task(models.Model):
 
     def is_completed(self):
         return self.status in self.TERMINAL_STATUSES
+
+    def is_valid(self):
+        if self.valid_until is not None:
+            return self.valid_until < arrow.utcnow().datetime
+        return True
 
     def mark_as_completed(self):
         self.status = 'COMPLETED'
@@ -79,8 +101,18 @@ class TaskValue(models.Model):
     task = models.ForeignKey('Task', related_name='values', on_delete=models.CASCADE)
     created = models.DateTimeField(auto_now_add=True)
     key = models.CharField(max_length=50, db_index=True)
-    value_content_type = models.CharField(choices=ALLOWED_CONTENT_TYPES, max_length=50, db_index=True)
+    content_type = models.CharField(choices=ALLOWED_CONTENT_TYPES, max_length=50, db_index=True)
     value = models.TextField()
+
+    def deserialize(self):
+        if self.content_type == 'INTEGER':
+            return int(self.value)
+        if self.content_type == 'STRING':
+            return str(self.value)
+        if self.content_type == 'DATETIME':
+            return arrow.get(self.value).datetime
+
+        return self.value
 
 
 __all__ = [

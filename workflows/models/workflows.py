@@ -13,7 +13,7 @@ class WorkflowBase(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     last_modified = models.DateTimeField(auto_now=True)
 
-    snoozing = postgres_fields.ArrayField(models.IntegerField(null=True, blank=True), null=True, blank=True)
+    snoozing = postgres_fields.ArrayField(models.PositiveIntegerField(), null=True, blank=True)
 
     def __repr__(self):
         return '{id}: {workflow} - {internal_name}'.format(
